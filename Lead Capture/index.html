@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Free n8n Self-Hosted Guide</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #04101a;
+      --surface:     #071520;
+      --surface2:    #091c2a;
+      --teal:        #0ef5c8;
+      --teal-mid:    #09d4ae;
+      --teal-soft:   rgba(14,245,200,0.5);
+      --teal-glow:   rgba(14,245,200,0.15);
+      --teal-faint:  rgba(14,245,200,0.05);
+      --teal-border: rgba(14,245,200,0.18);
+      --red:         #e84560;
+      --white:       #f0f9f7;
+      --text:        #8abfb8;
+      --muted:       #3d6b65;
+      --label:       rgba(14,245,200,0.7);
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden; /* prevent ANY scrolling */
+    }
+
+    body {
+      background: var(--bg);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* Dot-grid texture */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: radial-gradient(circle, rgba(14,245,200,0.06) 1px, transparent 1px);
+      background-size: 34px 34px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Ambient center glow */
+    body::after {
+      content: '';
+      position: fixed;
+      width: 1000px; height: 700px;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(ellipse, rgba(14,245,200,0.055) 0%, transparent 65%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ═══════════════ OUTER GLOW FRAME ═══════════════ */
+    .outer-frame {
+      position: relative;
+      z-index: 1;
+      width: min(960px, 96vw);
+      /* Teal glowing border — the hero effect from your screenshot */
+      border-radius: 16px;
+      padding: 3px;
+      background: linear-gradient(
+        135deg,
+        rgba(14,245,200,0.7) 0%,
+        rgba(14,245,200,0.25) 25%,
+        rgba(14,245,200,0.05) 50%,
+        rgba(14,245,200,0.2)  75%,
+        rgba(14,245,200,0.6)  100%
+      );
+      box-shadow:
+        0 0 0 1px rgba(14,245,200,0.08),
+        0 0 40px  rgba(14,245,200,0.18),
+        0 0 100px rgba(14,245,200,0.08),
+        0 0 200px rgba(14,245,200,0.04),
+        inset 0 0 60px rgba(14,245,200,0.02);
+      animation: frameIn 0.8s ease both;
+    }
+
+    @keyframes frameIn {
+      from { opacity: 0; transform: scale(0.97); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    .inner-frame {
+      background: var(--surface);
+      border-radius: 14px;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    /* ═══════════════ LEFT PANEL ═══════════════ */
+    .left {
+      padding: 44px 40px 40px;
+      border-right: 1px solid var(--teal-border);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 28px;
+    }
+
+    /* Soft corner glow on left panel */
+    .left::before {
+      content: '';
+      position: absolute;
+      top: -60px; left: -60px;
+      width: 260px; height: 260px;
+      background: radial-gradient(circle, rgba(14,245,200,0.07), transparent 70%);
+      pointer-events: none;
+    }
+
+    /* ── Badge ── */
+    .badge-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: riseUp 0.6s 0.1s ease both;
+    }
+
+    .badge {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--bg);
+      background: var(--teal);
+      padding: 4px 11px;
+      border-radius: 3px;
+    }
+
+    .badge-secondary {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--teal-mid);
+      border: 1px solid var(--teal-border);
+      padding: 4px 11px;
+      border-radius: 3px;
+      background: var(--teal-faint);
+    }
+
+    /* ── Headline ── */
+    .left-headline {
+      animation: riseUp 0.6s 0.15s ease both;
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--text);
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+      font-style: italic;
+    }
+
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(22px, 3.2vw, 34px);
+      line-height: 1.1;
+      letter-spacing: -0.3px;
+      color: var(--white);
+    }
+
+    h1 .teal {
+      color: var(--teal);
+      position: relative;
+      display: inline-block;
+    }
+
+    /* Glow blur layer */
+    h1 .teal::after {
+      content: attr(data-t);
+      position: absolute;
+      inset: 0;
+      color: var(--teal);
+      filter: blur(16px);
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    /* ── Covers list ── */
+    .covers {
+      animation: riseUp 0.6s 0.22s ease both;
+    }
+
+    .covers-heading {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .cover-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+    }
+
+    .cover-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .cover-list .num {
+      font-family: 'Syne', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--teal);
+      letter-spacing: 1px;
+      padding-top: 1px;
+      flex-shrink: 0;
+      width: 20px;
+    }
+
+    .cover-list .tick {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      border: 1.5px solid var(--teal-border);
+      background: var(--teal-faint);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .cover-list .tick svg {
+      width: 9px; height: 9px;
+      stroke: var(--teal);
+      stroke-width: 2.5;
+      fill: none;
+    }
+
+    .cover-list .item-text {
+      font-size: 13.5px;
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    .cover-list .item-text strong {
+      color: var(--white);
+      font-weight: 500;
+    }
+
+    /* ── Progress bar decoration ── */
+    .progress-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: riseUp 0.6s 0.28s ease both;
+    }
+
+    .prog-track {
+      flex: 1;
+      height: 2px;
+      background: rgba(14,245,200,0.08);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .prog-fill {
+      height: 100%;
+      width: 60%;
+      background: linear-gradient(90deg, var(--teal), var(--teal-mid));
+      border-radius: 99px;
+      box-shadow: 0 0 6px var(--teal);
+    }
+
+    .prog-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--teal);
+      box-shadow: 0 0 6px var(--teal), 0 0 14px rgba(14,245,200,0.4);
+      flex-shrink: 0;
+    }
+
+    .prog-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    /* ═══════════════ RIGHT PANEL ═══════════════ */
+    .right {
+      padding: 44px 40px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0;
+    }
+
+    .form-header {
+      margin-bottom: 24px;
+      animation: riseUp 0.6s 0.18s ease both;
+    }
+
+    .form-header h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(18px, 2.4vw, 24px);
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 6px;
+    }
+
+    .form-header p {
+      font-size: 13.5px;
+      color: var(--text);
+      font-weight: 300;
+      line-height: 1.6;
+    }
+
+    /* Beginner-friendly callout */
+    .beginner-note {
+      background: rgba(14,245,200,0.04);
+      border: 1px solid rgba(14,245,200,0.12);
+      border-left: 3px solid var(--teal);
+      border-radius: 6px;
+      padding: 11px 14px;
+      margin-bottom: 22px;
+      animation: riseUp 0.6s 0.22s ease both;
+    }
+
+    .beginner-note p {
+      font-size: 12.5px;
+      color: var(--text);
+      line-height: 1.55;
+    }
+
+    .beginner-note strong {
+      color: var(--teal-mid);
+      font-weight: 500;
+    }
+
+    /* Form */
+    form { animation: riseUp 0.6s 0.26s ease both; }
+
+    .form-group { margin-bottom: 14px; }
+
+    label {
+      display: block;
+      font-size: 10.5px;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 7px;
+    }
+
+    input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid rgba(14,245,200,0.12);
+      border-radius: 7px;
+      padding: 12px 15px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      color: var(--white);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      caret-color: var(--teal);
+    }
+
+    input:focus {
+      border-color: rgba(14,245,200,0.45);
+      box-shadow: 0 0 0 3px rgba(14,245,200,0.07), 0 0 14px rgba(14,245,200,0.05);
+    }
+
+    input::placeholder { color: var(--muted); }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      margin-top: 4px;
+      border: none;
+      border-radius: 8px;
+      background: var(--teal);
+      font-family: 'Syne', sans-serif;
+      font-size: 13.5px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #04101a;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 22px rgba(14,245,200,0.28);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.14), transparent 55%);
+      pointer-events: none;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(14,245,200,0.38);
+    }
+
+    .btn:active  { transform: translateY(0); }
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Error */
+    .error-banner {
+      display: none;
+      background: rgba(232,69,96,0.07);
+      border: 1px solid rgba(232,69,96,0.22);
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 12.5px;
+      color: #f08090;
+      margin-bottom: 12px;
+    }
+
+    .privacy {
+      margin-top: 14px;
+      font-size: 11.5px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      animation: riseUp 0.6s 0.3s ease both;
+    }
+
+    .privacy svg {
+      color: var(--teal);
+      flex-shrink: 0;
+    }
+
+    /* ═══════════════ SUCCESS ═══════════════ */
+    #form-view, #success-view { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    #success-view { display: none; text-align: center; }
+
+    .success-ring {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      border: 2px solid var(--teal);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 18px;
+      color: var(--teal);
+      box-shadow: 0 0 0 8px rgba(14,245,200,0.05), 0 0 40px rgba(14,245,200,0.2);
+      animation: breathe 2.5s ease infinite;
+    }
+
+    .success-ring svg {
+      width: 28px; height: 28px;
+      stroke: var(--teal);
+      stroke-width: 2.5;
+      fill: none;
+    }
+
+    @keyframes breathe {
+      0%,100% { box-shadow: 0 0 0 8px rgba(14,245,200,0.05), 0 0 40px rgba(14,245,200,0.2); }
+      50%      { box-shadow: 0 0 0 14px rgba(14,245,200,0.08), 0 0 60px rgba(14,245,200,0.32); }
+    }
+
+    #success-view h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+
+    #success-view p {
+      font-size: 13.5px;
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    /* ═══════════════ ANIMATIONS ═══════════════ */
+    @keyframes riseUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ═══════════════ MOBILE — single column, allow scroll ═══════════════ */
+    @media (max-width: 640px) {
+      html, body { overflow: auto; height: auto; }
+
+      .inner-frame {
+        grid-template-columns: 1fr;
+      }
+
+      .left {
+        padding: 32px 26px 28px;
+        border-right: none;
+        border-bottom: 1px solid var(--teal-border);
+      }
+
+      .right { padding: 28px 26px 32px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="outer-frame">
+  <div class="inner-frame">
+
+    <!-- ═══ LEFT ═══ -->
+    <div class="left">
+
+      <div class="badge-row">
+        <span class="badge">Free Guide</span>
+        <span class="badge-secondary">Beginner Friendly</span>
+      </div>
+
+      <div class="left-headline">
+        <p class="eyebrow">Here's the guide I mentioned —</p>
+        <h1>
+          Automate<br>
+          <span class="teal" data-t="Your Business">Your Business</span><br>
+          with n8n
+        </h1>
+      </div>
+
+      <div class="covers">
+        <p class="covers-heading">It covers</p>
+        <ul class="cover-list">
+          <li>
+            <span class="num">01</span>
+            <div class="tick">
+              <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+            </div>
+            <span class="item-text"><strong>Online deployment</strong> — get n8n live in minutes, step by step</span>
+          </li>
+          <li>
+            <span class="num">02</span>
+            <div class="tick">
+              <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+            </div>
+            <span class="item-text"><strong>Database setup</strong> — connect and configure your data layer properly</span>
+          </li>
+          <li>
+            <span class="num">03</span>
+            <div class="tick">
+              <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+            </div>
+            <span class="item-text"><strong>Anti-sleep workaround</strong> — keep your instance running 24/7</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="progress-row">
+        <div class="prog-track"><div class="prog-fill"></div></div>
+        <div class="prog-dot"></div>
+        <span class="prog-label">3 CHAPTERS</span>
+      </div>
+
+    </div>
+
+    <!-- ═══ RIGHT ═══ -->
+    <div class="right">
+
+      <div id="form-view">
+        <div class="form-header">
+          <h2>Get Instant Access</h2>
+          <p>Enter your details and I'll send the guide straight to your inbox.</p>
+        </div>
+
+        <div class="beginner-note">
+          <p><strong>No experience needed.</strong> This guide is written for complete beginners — every step is explained clearly so you can follow along even if you've never deployed anything before.</p>
+        </div>
+
+        <div class="error-banner" id="error-banner">Something went wrong — please check your details and try again.</div>
+
+        <form id="lead-form">
+          <div class="form-group">
+            <label for="name">First Name</label>
+            <input type="text" id="name" name="name" placeholder="e.g. Maria" required autocomplete="given-name"/>
+          </div>
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email"/>
+          </div>
+          <button class="btn" type="submit" id="submit-btn">
+            <span id="btn-text">Send Me the Free Guide →</span>
+          </button>
+        </form>
+
+        <p class="privacy">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="3" y="11" width="18" height="11" rx="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          Your info is 100% private. No spam, ever.
+        </p>
+      </div>
+
+      <!-- Success -->
+      <div id="success-view">
+        <div class="success-ring">
+          <svg viewBox="0 0 24 24"><polyline points="4,12 9,17 20,6"/></svg>
+        </div>
+        <h2>You're all set!</h2>
+        <p>Your guide is on its way to your inbox.<br>Can't find it? Check your spam folder.</p>
+      </div>
+
+    </div>
+    <!-- ═══ end RIGHT ═══ -->
+
+  </div>
+</div>
+
+<script>
+  const form        = document.getElementById('lead-form');
+  const submitBtn   = document.getElementById('submit-btn');
+  const btnText     = document.getElementById('btn-text');
+  const errorBanner = document.getElementById('error-banner');
+  const formView    = document.getElementById('form-view');
+  const successView = document.getElementById('success-view');
+
+  // ⚠️ Replace with your actual n8n webhook URL
+  const WEBHOOK_URL = 'https://n8n-jeremiahragay.onrender.com/webhook/lead-capture';
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorBanner.style.display = 'none';
+
+    const name  = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    if (!name || !email) return;
+
+    submitBtn.disabled  = true;
+    btnText.textContent = 'Sending…';
+
+    try {
+      const res  = await fetch(WEBHOOK_URL, {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ name, email })
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        formView.style.display    = 'none';
+        successView.style.display = 'flex';
+      } else {
+        throw new Error(data.message || 'Error');
+      }
+    } catch {
+      errorBanner.style.display = 'block';
+      submitBtn.disabled        = false;
+      btnText.textContent       = 'Send Me the Free Guide →';
+    }
+  });
+</script>
+
+</body>
+</html>
